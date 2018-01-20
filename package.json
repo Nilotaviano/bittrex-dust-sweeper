@@ -1,0 +1,12 @@
+{
+  "name": "bittrex-dust-sweeper",
+  "version": "0.0.0",
+  "description": "bittrex-dust-sweeper",
+  "main": "app.js",
+  "author": {
+    "name": "nilot"
+  },
+  "dependencies": {
+    "node-bittrex-api": "^0.8.1"
+  }
+}

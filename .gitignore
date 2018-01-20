@@ -57,3 +57,5 @@ typings/
 # dotenv environment variables file
 .env
 
+.vs/bittrex-dust-sweeper/v15/.suo
+package-lock.json
