@@ -2,26 +2,80 @@
 
 let bittrex = require('./bittrex_adapter');
 
-bittrex.getbalances(async (response) => {
+bittrex.getmarketsummaries(async (response) => {
   if (response.success && response.result && response.result.length > 0) {
-    await sleep(10);
-    cleanDust(response.result);
+    let marketsByCoin = {}; // Index markets by target coin
+
+    for (let i in response.result) {
+      let marketSummary = response.result[i];
+      let splittedMarket = marketSummary.MarketName.split("-");
+
+      let targetCoin = splittedMarket[1];
+      let baseCoin = splittedMarket[0];
+
+      if (!marketsByCoin.hasOwnProperty(targetCoin)) {
+        marketsByCoin[targetCoin] = {};
+      }
+
+      let marketsOfTargetCoin = marketsByCoin[targetCoin];
+
+      if (!marketsOfTargetCoin.hasOwnProperty(baseCoin)) {
+        marketsOfTargetCoin[baseCoin] = marketSummary;
+      }
+    }
+
+    await cleanMarketsWithBalance(marketsByCoin);
   }
   else {
-    console.error("Error on getbalances:\n" + JSON.stringify(response));
+    console.error("Error on getmarketsummaries:\n" + JSON.stringify(response));
   }
 });
 
-async function cleanDust(balances) {
+async function cleanMarketsWithBalance(marketsByCoin) {
+  bittrex.getbalances(async (response) => {
+    if (response.success && response.result && response.result.length > 0) {
+      await sleep(10);
+      cleanDust(response.result, marketsByCoin);
+    }
+    else {
+      console.error("Error on getbalances:\n" + JSON.stringify(response));
+    }
+  });
+}
+
+async function cleanDust(balances, marketsByCoin) {
   for (let i = 0; i < balances.length; i++) {
     let balance = balances[i];
 
     if (balance.Available == 0)
       continue;
+    else if (balance.Currency == "BTC")
+      continue;
+    else {
+      let marketsOfTargetCoin = marketsByCoin[balance.Currency];
 
-    await sweep(balance);
+      if (!marketsOfTargetCoin) {
+        console.log(`No market found for coin ${balance.Currency}`);
+        continue;
+      }
 
-    await sleep(10);
+      let btcMarket = marketsOfTargetCoin["BTC"];
+
+      if (!btcMarket) {
+        console.log(`BTC market not found for coin ${balance.Currency}`);
+        console.log(`Available balances are: `);
+        console.log(JSON.stringify(marketsOfTargetCoin));
+        continue;
+      }
+
+      if (!isWorthSweeping(btcMarket.Bid, balance.Available)) {
+        console.log(`Sweeping ${balance.Currency} is not worth it`);
+        continue;
+      }
+
+      await sweep(balance);
+      await sleep(10);
+    }
   }
 }
 
