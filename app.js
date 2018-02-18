@@ -77,8 +77,6 @@ async function cleanDust(balances, marketsByCoin) {
       await sleep(10);
     }
   }
-
-  await sleep(1000 * 60 * 30); // Waits 30 minutes
 }
 
 async function sweep(balance) {
